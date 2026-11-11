@@ -15,6 +15,13 @@ describe("endereço para QR codes", () => {
       wlan0: [entry("192.168.1.20")],
     }, undefined)).toBe("192.168.1.20");
   });
+  it("prioriza rede física em vez de interfaces virtuais comuns", () => {
+    expect(networkAddress({
+      podman0: [entry("10.88.0.1")],
+      tailscale0: [entry("100.64.0.1")],
+      wlan0: [entry("192.168.1.20")],
+    }, undefined)).toBe("192.168.1.20");
+  });
   it("usa o IP Wi-Fi configurado em vez da rede virtual do container", () => {
     expect(networkAddress({ eth0: [entry("172.19.60.97")] }, "192.168.68.108")).toBe("192.168.68.108");
     expect(() => networkAddress({}, "127.0.0.1")).toThrow("CATCH_LAN_IP");
