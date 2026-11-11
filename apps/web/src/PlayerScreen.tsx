@@ -69,9 +69,5 @@ export function PlayerScreen({ session }: { session: Session }) {
       {!session.connected ? "Reconectando…" : session.room!.status === "paused" ? "Jogo pausado" : session.room!.status === "lobby" ? "Aguardando início" : "Conectado"}
     </div>
     {session.room!.pauseReason && <p className="notice">{session.room!.pauseReason}</p>}
-    <section className="player-waiting">
-      <p>Seu personagem está pronto.</p>
-      <p className="hint">O mapa e as ações do turno serão adicionados nas próximas etapas.</p>
-    </section>
   </>;
 }

@@ -1,8 +1,10 @@
-# Tabuleiro virtual Pokémon — plano e registro de decisões
+# Terra — plano e registro de decisões
 
 ## Objetivo e estado atual
 
-Projeto de fã para partidas familiares em rede local. O notebook hospeda o servidor, o tablet exibe o tabuleiro compartilhado e cada celular representa um jogador.
+Jogo para partidas familiares em rede local. O notebook hospeda o servidor, o tablet exibe o tabuleiro compartilhado e cada celular representa um jogador.
+
+**Nova direção:** o jogo se chamará Terra e terá identidade própria, com criaturas originais inspiradas na cultura, no folclore, nos animais e nos biomas brasileiros. O protótipo existente ainda contém referências e recursos de Pokémon; sua substituição será feita em etapas futuras, não está concluída. As referências a Pokémon neste documento registram o plano anterior e devem ser revistas na transição, sem pressupor que nomes e elementos específicos serão mantidos.
 
 Este documento, mantido em `docs/projeto.md` no repositório, é a fonte de continuidade do desenvolvimento: requisitos confirmados, limites da primeira entrega, decisões técnicas propostas, pendências e critérios de validação. Deve ser atualizado conforme as decisões mudarem.
 
@@ -12,18 +14,21 @@ Primeiro marco implementado:
 
 - Workspaces TypeScript com interface React/Vite, servidor Node.js/Socket.IO e contratos compartilhados validados com Zod.
 - Uma única partida em memória; anfitrião prepara, inicia teste de conexão, retoma e encerra mediante confirmação reutilizável.
-- QR codes locais separados para mapa e jogador, com seleção do endereço de rede.
+- QR codes locais separados para mapa e jogador, usando sempre o endereço informado pelo servidor e a porta da interface; sem seletor de IP. No WSL, detectar o IPv4 Wi-Fi do Windows pelo PowerShell e transmiti-lo como `CATCH_LAN_IP`; não usar o IP interno do WSL/container. No Linux nativo, priorizar interfaces não virtuais. Nunca gerar QR de loopback; sem rede disponível, informar erro em vez de usar localhost como fallback.
 - Sem salas ou identificadores na URL: QR codes levam diretamente a `/map` e `/player` no endereço completo do servidor. Ambos conectam automaticamente à partida única preparada no notebook.
 - Celulares recebem nome sequencial (**Jogador A**, **Jogador B** etc.) e personagem aleatório exclusivo.
 - Tela mobile simplificada: nome editável por toque e círculo do personagem no topo. Tocar no círculo abre seleção em modal; personagens ocupados não podem ser escolhidos. Consulta geral dos dispositivos/jogadores fica no notebook e tablet.
 - Seleção inicial de 12 personagens distintos da imagem fornecida, com recortes frontais explícitos; não oferecer quadros de animação como personagens diferentes.
 - O servidor valida edição de nome e exclusividade dos personagens, inclusive durante desconexões. Reconexão preserva o perfil; troca de personagem libera o anterior. Esgotamento dos personagens impede novas entradas com aviso.
 - Lista de jogadores e estados dos dispositivos sincronizada.
+- Conexão ao notebook indicada por bolinha após o título: verde conectado/pronto, vermelho desconectado e amarelo recuperando sessão. Sem texto “Conectado ao notebook”, linha de dispositivo, apresentação do tablet ou dimensões do mapa. Manter descrição acessível e tooltip; a validação de fullscreen continua funcionando sem indicador de tablet.
 - Chaves de reconexão por aba em `sessionStorage`, sem duplicar o jogador ao recarregar ou recuperar a conexão.
 - Tablet solicita fullscreen e informa sua área útil; sair do fullscreen ou desconectar pausa globalmente uma sessão iniciada.
 - Retomada confirmada como fluxo desta etapa: somente o anfitrião retoma, com mapa conectado e em fullscreen. Voltar ao fullscreen não retoma automaticamente.
 - Testes de sala, verificação de tipos, build de produção e teste de navegador com anfitrião, mapa e dois jogadores.
-- Script Linux `iniciar.sh`: verifica ferramentas, restaura dependências se necessário, compila e inicia em primeiro plano. Painel em `http://localhost:3000/host`, destinado também à futura integração do CRUD.
+- Script Linux `iniciar.sh`: verifica ferramentas, restaura dependências se necessário e inicia em desenvolvimento por padrão, com Vite/React Fast Refresh e `tsx watch`. Exibe os endereços IPv4 de rede para abrir o painel na porta 5173, sem usar localhost; `/host` é um endereço alternativo. `--producao` compila e serve na porta 3000. `WEB_PORT` configura a interface de desenvolvimento e `PORT` configura o servidor/proxy. Alterações no servidor reiniciam e descartam a partida em memória; alterações comuns de interface são aplicadas sem reiniciar o servidor.
+- No WSL, seguir o mecanismo verificado no projeto karaoke: PowerShell detecta o Wi-Fi do Windows e Docker Desktop publica a porta na rede física. `iniciar.sh` sobe o Compose e mantém `docker compose watch` para sincronização reativa. Ctrl+C para o monitoramento, mas não o container; `docker compose stop` encerra o serviço. Linux nativo continua executando Node/Vite diretamente. Nenhuma regra de firewall ou configuração global do Windows é alterada automaticamente.
+- Página inicial detecta e abre a partida existente ou cria uma automaticamente quando não houver, sem botões iniciais ou escolha de dispositivo. Exibe os QR codes separados do tablet e celular, com link clicável abaixo de cada um. Abrir outro painel não reinicia a partida. Encerrar explicitamente mantém a partida encerrada até reabrir pelo botão ou recarregar a página. Essa abertura automática não inicia os futuros turnos antes do mapa e dos jogadores estarem prontos.
 
 O mapa atual é uma tela de conexão, não um tabuleiro. **Iniciar teste de conexão** não inicia turnos nem substitui a futura geração/prévia do mapa. Catálogo/SQLite, cidades, mapa procedural e mecânicas de jogo ainda não foram implementados; apenas a seleção inicial de sprites já está disponível.
 
@@ -57,7 +62,7 @@ Não implementar multiplicadores de tipo: o poder dos Pokémon será fixo. Tipos
 ## 2. Dispositivos e ciclo da partida única
 
 1. Anfitrião inicia o servidor no notebook e abre o controle local.
-2. Prepara a partida única; o painel informa endereço de rede local e QR codes separados para tablet e celulares, sem identificação de sala.
+2. O painel recupera ou cria automaticamente a partida única e informa endereço de rede local e QR codes separados para tablet e celulares, sem identificação de sala.
 3. Tablet entra como mapa e informa sua área útil após entrar em fullscreen.
 4. Anfitrião gera e inspeciona o mapa antes de iniciar os turnos.
 5. Celulares entram automaticamente pelo QR com nome padrão sequencial e sprite aleatório exclusivo; podem editar o perfil pelo topo da tela. A escolha de uma das oito cidades será implementada junto do mapa.
@@ -251,7 +256,7 @@ Começar com catálogo pequeno e explícito, com cadeias evolutivas suficientes 
 
 ### Referência de dados: PokéAPI
 
-Fonte REST indicada pelo usuário para futuras consultas e preenchimento do catálogo:
+Referência do plano anterior, não uma integração implementada nem uma fonte definida para o futuro catálogo de criaturas originais:
 
 - Site: https://pokeapi.co/
 - Documentação REST v2: https://pokeapi.co/docs/v2
@@ -260,11 +265,11 @@ Fonte REST indicada pelo usuário para futuras consultas e preenchimento do cat�
 - `pokemon-species/{id ou nome}/`: informações da espécie e referência à cadeia evolutiva.
 - `evolution-chain/{id}/`: cadeia evolutiva.
 
-A documentação informa acesso de leitura via GET, sem autenticação, e solicita cache local dos recursos consultados. Uma futura importação deve ocorrer explicitamente na preparação/cadastro, persistindo os dados e recursos necessários localmente. A partida deve continuar independente de internet; não consultar a API nos celulares a cada ação.
+A documentação informa acesso de leitura via GET, sem autenticação, e solicita cache local dos recursos consultados. Para o futuro catálogo próprio, guardar os dados e recursos necessários localmente; a partida deve continuar independente de internet.
 
 Esta referência não implementa uma integração nem define as regras do jogo: poder fixo, faces aceitas na captura e demais ajustes continuam sendo configurações do catálogo local, não uma conversão automática dos atributos oficiais.
 
-### Tipografia temática
+### Tipografia temática atual
 
 - Arquivo `pokemon.zip` fornecido pelo usuário, contendo variantes **Pokemon Solid** e **Pokemon Hollow**, armazenadas em `apps/web/public/fonts/`.
 - Usar a Solid para títulos de destaque, nome do jogador no celular e, quando apropriado, nomes de Pokémon e chamadas como **Batalha**.
@@ -272,6 +277,19 @@ Esta referência não implementa uma integração nem define as regras do jogo: 
 - É uma fonte chamativa: manter textos corridos, instruções, formulários e controles comuns em fonte de sistema legível.
 - Fontes servidas localmente com `font-display: swap` e fallback de sistema.
 - O arquivo fornecido não contém licença ou termos de distribuição; verificar esses termos antes de publicar ou redistribuir o projeto.
+- Na transição para a identidade própria, revisar e substituir a tipografia temática atual conforme necessário; isso ainda não foi implementado.
+
+### Criação de criaturas, sprites e animações próprias
+
+- Partir de uma ideia simples, como “tatu”, e desenvolver uma criatura original: nome, aparência, personalidade, paleta e relação com a cultura ou a natureza brasileira. Usar referências com respeito e cuidado, sem copiar personagens, nomes, sprites ou designs reconhecíveis de outras franquias.
+- A IA pode ajudar a criar conceitos e referências visuais e a experimentar quadros; o resultado precisa de revisão e, quando necessário, ajustes em Aseprite ou LibreSprite. Guardar os arquivos editáveis e registrar autoria, ferramentas e direitos de uso dos recursos antes de uma eventual distribuição.
+- Definir uma identidade visual consistente entre criaturas: perspectiva, contorno, paleta, nível de detalhe e escala. Preparar separadamente a ilustração da criatura e seu ícone de mapa; a ilustração maior não é necessariamente um sprite pronto para uso.
+- Para entidades no mapa (*overworld entities*), usar uma vista de cima ou levemente inclinada, com silhueta reconhecível em tamanho pequeno. A entidade fica fixa no lugar, animada para parecer viva; caminhada e múltiplas direções não são necessárias para esse caso.
+- A animação de repouso pode combinar movimento suave do rabo, respiração e piscadas, quando visíveis. Criar quadros coerentes, mantendo corpo, tamanho, posição e ponto de apoio estáveis; não usar apenas deformação da imagem inteira como substituto desses movimentos. O ciclo deve retornar naturalmente ao início.
+- Exportar uma spritesheet PNG com fundo transparente, células uniformes e quadros alinhados, além de uma prévia animada em GIF. Como ponto de partida, experimentar células de 64×64 pixels e poucos quadros; decidir o tamanho final conforme a escala do mapa e a legibilidade no tablet. Registrar ordem dos quadros, duração e ponto de apoio junto ao recurso.
+- Conferir a animação em loop e no tamanho real de exibição: transparência, recortes, alinhamento, duração, consistência do desenho e continuidade do rabo e dos olhos. Imagens geradas por IA podem alterar ou omitir detalhes entre quadros; uma spritesheet gerada não garante células regulares ou uma animação pronta para o jogo.
+
+O tatu criado na conversa foi uma prova de conceito, não um recurso final integrado ao projeto. A versão para o mapa usa quatro quadros de 64×64; sua prévia repete quadros e inclui uma piscada de um olho. Os nomes das criaturas, a direção artística definitiva e o processo de integração dos recursos ainda serão definidos.
 
 ## 9. Arquitetura técnica proposta
 

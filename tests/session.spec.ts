@@ -10,22 +10,28 @@ test("notebook, mapa e dois celulares sincronizam, reconectam e respeitam a paus
     const map = await mapContext.newPage();
     const ana = await anaContext.newPage();
     const bia = await biaContext.newPage();
-    await host.goto("/host");
     await ana.goto("/player");
     await expect(ana.getByRole("heading", { name: "Aguardando o notebook" })).toBeVisible();
-    await host.getByRole("button", { name: "Preparar partida" }).click();
+    await host.goto("/");
+    await expect(host.getByRole("heading", { name: "Uma aventura na mesma mesa." })).toBeVisible();
+    await expect(host.getByRole("link", { name: "Notebook", exact: true })).toHaveCount(0);
     await expect(host.getByText("Aguardando início", { exact: true })).toBeVisible();
     const mapLink = await host.getByRole("link").filter({ hasText: "/map" }).getAttribute("href");
     if (!mapLink) throw new Error("Endereço do mapa ausente");
     expect(new URL(mapLink).search).toBe("");
-    await expect(host.getByRole("img", { name: "QR code: Celular · entrar como jogador" })).toBeVisible();
+    expect(new URL(mapLink).hostname).not.toMatch(/^(localhost|127\.|\[::1\])/);
+    expect(new URL(mapLink).port).toBe(new URL(host.url()).port);
+    await expect(host.getByLabel("Endereço do notebook na rede")).toHaveCount(0);
+    await expect(host.getByRole("img", { name: "QR code: Jogar" })).toBeVisible();
 
     await map.goto("/map");
     await expect(map.getByLabel("Código da sala")).toHaveCount(0);
-    await expect(host.getByText("Tablet: aguardando fullscreen")).toBeVisible();
+    await expect(map.getByRole("button", { name: "Ativar fullscreen" })).toBeVisible();
+    await expect(host.getByRole("img", { name: /^Tablet:/ })).toHaveCount(0);
     await expect(host.getByRole("button", { name: "Iniciar teste de conexão" })).toBeDisabled();
     await map.getByRole("button", { name: "Ativar fullscreen" }).click();
-    await expect(host.getByText("Tablet: em fullscreen")).toBeVisible();
+    await expect(host.getByRole("heading", { level: 1 }).getByRole("img", { name: "Notebook: conectado", exact: true })).toHaveClass(/connected/);
+    await expect(host.getByText("Conectado ao notebook", { exact: true })).toHaveCount(0);
 
     await bia.goto("/player");
     for (const [page, initialName, name] of [[ana, "Jogador A", "Ana"], [bia, "Jogador B", "Bia"]] as const) {
@@ -35,6 +41,8 @@ test("notebook, mapa e dois celulares sincronizam, reconectam e respeitam a paus
       await page.getByRole("button", { name: "Salvar nome" }).click();
       await expect(page.getByRole("button", { name: `Editar nome: ${name}`, exact: true })).toBeVisible();
       await expect(page.locator(".players")).toHaveCount(0);
+      await expect(page.getByText("Seu personagem está pronto.", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("O mapa e as ações do turno serão adicionados nas próximas etapas.", { exact: true })).toHaveCount(0);
     }
     const anaCharacter = await ana.getByRole("button", { name: "Trocar personagem" }).getByRole("img").getAttribute("aria-label");
     const biaCharacter = await bia.getByRole("button", { name: "Trocar personagem" }).getByRole("img").getAttribute("aria-label");
@@ -88,7 +96,7 @@ test("notebook, mapa e dois celulares sincronizam, reconectam e respeitam a paus
     await expect(host.locator(".status")).toContainText("Sessão pausada");
     await host.getByRole("button", { name: "Encerrar partida" }).click();
     await host.getByRole("button", { name: "Confirmar", exact: true }).click();
-    await expect(host.getByRole("button", { name: "Preparar partida" })).toBeVisible();
+    await expect(host.getByRole("button", { name: "Abrir partida novamente" })).toBeVisible();
     await expect(ana.getByRole("heading", { name: "Aguardando o notebook" })).toBeVisible();
     await expect(map.getByRole("heading", { name: "Aguardando o notebook" })).toBeVisible();
   } finally {

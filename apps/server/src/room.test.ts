@@ -46,9 +46,23 @@ describe("sala em memória", () => {
   }
 
   it("cria apenas uma sala e não expõe credenciais no snapshot", () => {
-    expect(rooms.execute("other", { type: "create" })).toMatchObject({ ok: false, code: "ROOM_EXISTS" });
+    const original = rooms.snapshot()!;
+    const other = credentials(rooms.execute("other", { type: "create" }));
+    expect(other.roomId).toBe(original.id);
+    expect(rooms.snapshot()!.id).toBe(original.id);
+    expect(credentials(rooms.execute("other", { type: "create" }))).toEqual(other);
+    rooms.disconnect("host");
+    expect(rooms.snapshot()!.hostConnected).toBe(true);
     expect(JSON.stringify(rooms.snapshot())).not.toContain(host.token);
     expect(rooms.snapshot()!.id).toBe(host.roomId);
+  });
+
+  it("abrir o painel existente preserva jogadores e recusa trocar o papel do jogador", () => {
+    joinPlayer();
+    const before = rooms.snapshot();
+    success(rooms.execute("another-host", { type: "create" }));
+    expect(rooms.snapshot()).toEqual(before);
+    expect(rooms.execute("player", { type: "create" })).toMatchObject({ ok: false, code: "FORBIDDEN" });
   });
 
   it("valida entradas antes de alterar estado", () => {

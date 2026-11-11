@@ -1,13 +1,14 @@
 import { createServer } from "node:http";
-import { networkInterfaces } from "node:os";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
 import { Server } from "socket.io";
 import type { ClientEvents, ServerEvents } from "@catch/shared";
 import { RoomService } from "./room";
+import { networkAddress } from "./network";
 
 export function createApp(webDirectory?: string) {
+  networkAddress();
   const app = express();
   const http = createServer(app);
   const io = new Server<ClientEvents, ServerEvents>(http, {
@@ -27,9 +28,12 @@ export function createApp(webDirectory?: string) {
   );
   app.get("/api/health", (_request, response) => response.json({ ok: true }));
   app.get("/api/network", (_request, response) => {
-    const addresses = Object.values(networkInterfaces()).flatMap((entries) =>
-      (entries ?? []).filter((entry) => entry.family === "IPv4" && !entry.internal).map((entry) => entry.address));
-    response.json({ addresses: [...new Set(addresses)] });
+    const address = networkAddress();
+    if (!address) {
+      response.status(503).json({ error: "Nenhum IP de rede disponível. Conecte o notebook à rede." });
+      return;
+    }
+    response.json({ address });
   });
   io.on("connection", (socket) => {
     socket.emit("availability", rooms.snapshot()?.id ?? null);

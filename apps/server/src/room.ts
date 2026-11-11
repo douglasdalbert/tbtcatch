@@ -57,7 +57,10 @@ export class RoomService {
     if (!member) return;
     member.socketId = null;
     if (member.player) member.player.connected = false;
-    if (member.role === "host") this.requireRoom().snapshot.hostConnected = false;
+    if (member.role === "host") {
+      const room = this.requireRoom();
+      room.snapshot.hostConnected = room.members.some((entry) => entry.role === "host" && entry.socketId !== null);
+    }
     if (member.role === "map") {
       const { snapshot } = this.requireRoom();
       snapshot.map.connected = false;
@@ -101,7 +104,15 @@ export class RoomService {
 
   private handle(socketId: string, command: Command): Credentials | undefined {
     if (command.type === "create") {
-      if (this.room) throw new CommandError("ROOM_EXISTS", "Já existe uma partida preparada neste servidor.");
+      if (this.room) {
+        const existing = this.room.members.find((entry) => entry.socketId === socketId);
+        if (existing) {
+          if (existing.role !== "host") throw new CommandError("FORBIDDEN", "Este dispositivo já está vinculado a outro papel.");
+          return { role: "host", roomId: this.room.snapshot.id, token: existing.token };
+        }
+        this.room.snapshot.hostConnected = true;
+        return this.addMember(socketId, "host");
+      }
       this.room = {
         snapshot: {
           id: randomUUID(),

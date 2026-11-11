@@ -1,6 +1,8 @@
 # Catch — tabuleiro em família
 
-Protótipo web local de um tabuleiro de fã com tema Pokémon. O notebook hospeda uma única partida, o tablet exibe o mapa e os celulares representam os jogadores. Não há seleção ou identificação de salas nos links.
+Protótipo web local de um tabuleiro para partidas em família. O notebook hospeda uma única partida, o tablet exibe o mapa e os celulares representam os jogadores. Não há seleção ou identificação de salas nos links.
+
+O jogo se chamará **Terra** e seguirá para uma identidade própria, com criaturas originais inspiradas no Brasil. O protótipo atual ainda contém referências e recursos de Pokémon, cuja substituição será planejada futuramente. O processo proposto para criar imagens e animações está em [docs/projeto.md](./docs/projeto.md#criação-de-criaturas-sprites-e-animações-próprias).
 
 ## Estado atual
 
@@ -15,6 +17,7 @@ Regras e próximos passos estão em [docs/projeto.md](./docs/projeto.md).
 - Node.js `^22.18.0`, `^24.11.0` ou `>=26.0.0` e npm.
 - Aparelhos na mesma rede local.
 - Navegador do tablet com Fullscreen API; o botão informa se ela não estiver disponível.
+- No WSL: Docker Desktop com integração habilitada para a distribuição e acesso a `powershell.exe`. O inicializador detecta o IPv4 Wi-Fi do Windows, como no projeto karaoke, e publica a interface por Docker Desktop. Não use o IP interno `172.x` do WSL no tablet.
 
 ## Executar
 
@@ -24,17 +27,19 @@ No Linux, na raiz do projeto:
 ./iniciar.sh
 ```
 
-O script funciona mesmo quando chamado de outra pasta, confere Node.js, restaura dependências ausentes/inconsistentes com `npm ci`, compila e inicia o servidor em primeiro plano. Na primeira execução, instalar dependências requer internet. Depois, com dependências completas, iniciar não exige downloads. Mantenha o terminal aberto; use Ctrl+C para encerrar.
+O script funciona mesmo quando chamado de outra pasta e inicia em **modo de desenvolvimento**, com atualização automática da interface ao salvar. No Linux nativo, confere Node.js e restaura dependências ausentes/inconsistentes com `npm ci`. No WSL, detecta o Wi-Fi pelo Windows, compila a imagem e sobe o aplicativo pelo Docker Desktop, seguindo com `docker compose watch`. A primeira instalação/build requer internet.
 
-Abra **http://localhost:3000/host** no notebook. Esse é o painel único dos QR codes e o ponto previsto para integrar o futuro CRUD; o CRUD ainda não está implementado.
+No Linux nativo, Ctrl+C encerra o servidor. No WSL, Ctrl+C encerra apenas o monitoramento; para parar o aplicativo, execute `docker compose stop`. Para retomá-lo com monitoramento, execute `./iniciar.sh` novamente. Alterações na interface são sincronizadas pelo Compose e aplicadas pelo Vite; alterações no backend reiniciam o servidor e descartam a partida.
 
-1. Clique em **Preparar partida**.
-2. Confira o endereço de rede selecionado. Se houver várias interfaces, escolha o IP acessível pelos demais aparelhos.
-3. No tablet, leia o QR **Tablet · abrir mapa**. A conexão é automática; toque em **Ativar fullscreen**.
-4. Nos celulares, leia o QR **Celular · entrar como jogador**. A entrada é automática como **Jogador A**, **Jogador B** etc., com personagem aleatório disponível.
+Abra no notebook o **endereço de rede exibido pelo script**, por exemplo `http://192.168.1.10:5173/`. A página inicial recupera a partida existente ou cria uma automaticamente, sem seleção de dispositivo nem botão inicial. Os QR codes do tablet e dos celulares aparecem com links clicáveis abaixo. Esse é também o painel previsto para integrar o futuro CRUD, ainda não implementado. `/host` continua funcionando como endereço alternativo do mesmo painel.
+
+1. Aguarde a abertura automática da partida e dos QR codes. Abrir outro painel não recria nem apaga a partida existente.
+2. Abra o endereço Wi-Fi exibido pelo script. O servidor fornece o IP de rede para os QR codes, sem seletor de IP, independentemente do endereço usado para abrir o painel. No WSL/Docker, usa `CATCH_LAN_IP` detectado pelo PowerShell, nunca o IP interno da VM/container. Sem endereço válido, apresenta erro em vez de gerar QR de loopback.
+3. No tablet, leia o QR **Abrir mapa**. A conexão é automática; toque em **Ativar fullscreen**.
+4. Nos celulares, leia o QR **Jogar**. A entrada é automática como **Jogador A**, **Jogador B** etc., com personagem aleatório disponível.
 5. Quando o tablet estiver em fullscreen e todos os jogadores conectados, use **Iniciar teste de conexão**.
 6. Sair do fullscreen ou desconectar o tablet pausa a sessão para todos. Ative novamente o fullscreen e clique em **Retomar sessão** no notebook.
-7. **Encerrar partida** pede confirmação e descarta a sessão para todos.
+7. **Encerrar partida** pede confirmação e descarta a sessão para todos. Nesse caso, o painel não cria outra imediatamente; use **Abrir partida novamente** ou recarregue a página para abrir uma nova.
 
 Os QR codes abrem `/map` e `/player`, sem parâmetros de sala. Telas abertas antes de preparar a partida aguardam e conectam automaticamente quando o anfitrião a prepara. URLs antigas com `?room=...` também abrem a partida única: o parâmetro não é utilizado.
 
@@ -50,15 +55,23 @@ Os QR codes abrem `/map` e `/player`, sem parâmetros de sala. Telas abertas ant
 
 Os links dos QR codes incluem a porta atual. `localhost` e `127.0.0.1` não funcionam nos outros aparelhos: eles apontam para o próprio dispositivo.
 
-O servidor escuta em `0.0.0.0:3000`. Libere essa porta apenas para a rede local no firewall, se necessário. Para outra porta:
+No desenvolvimento, o Vite escuta em `0.0.0.0:5173` e encaminha API e Socket.IO ao servidor na porta 3000. Libere a porta **5173** apenas para a rede local no firewall, se necessário. Para alterar as portas da interface e do servidor:
 
 ```sh
-PORT=3001 ./iniciar.sh
+WEB_PORT=5174 PORT=3001 ./iniciar.sh
 ```
 
-Execução manual equivalente, após instalar dependências: `npm run build && npm start`.
+Abra então o IP de rede mostrado pelo script na porta 5174; os QR codes usarão esse endereço e porta. `PORT` e `WEB_PORT` devem ser diferentes.
 
-Se estiver usando WSL2, contêiner ou máquina virtual, seu IP virtual pode não ser acessível pelo Wi-Fi. Configure a rede espelhada/encaminhamento de porta do ambiente e abra o controle do anfitrião pelo endereço que os aparelhos conseguem acessar. Esse endereço também aparecerá na seleção para os QR codes.
+### Produção, sem atualização automática
+
+```sh
+./iniciar.sh --producao
+```
+
+Esse modo compila e serve a interface e a API juntas pelo **IP de rede do notebook na porta 3000** (ou na porta `PORT`). Libere essa porta na rede local. Execução manual equivalente, após instalar dependências: `npm run build && npm start`.
+
+No WSL2, use `./iniciar.sh` em vez de executar `npm run dev` diretamente: o IP virtual do WSL não é o endereço acessível pelo Wi-Fi. O script publica a porta pelo Docker Desktop no IP Wi-Fi do Windows. Se o Windows solicitar acesso à rede, permita somente na rede privada da família. A aplicação não cria regras de firewall nem exige PowerShell elevado. Se o acesso ainda falhar, confira o firewall do Windows e isolamento de clientes/rede de convidados no roteador.
 
 ### Durante o desenvolvimento
 
@@ -66,7 +79,9 @@ Se estiver usando WSL2, contêiner ou máquina virtual, seu IP virtual pode não
 npm run dev
 ```
 
-Abra **http://localhost:5173/host**. O Vite atende a interface na porta 5173 e encaminha API e Socket.IO ao servidor na porta 3000. No Wi-Fi, utilize o IP do notebook com porta **5173**; nessa modalidade, libere essa porta.
+Abra o **IP de rede do notebook na porta 5173**. O Vite atende a interface na porta 5173 e encaminha API e Socket.IO ao servidor na porta 3000. No Wi-Fi, libere a porta **5173**.
+
+Esse comando é usado diretamente por `./iniciar.sh` no Linux nativo (também aceita `--dev`); no WSL ele roda dentro do container, com sincronização do Compose Watch. React Fast Refresh atualiza a interface ao salvar arquivos; o servidor usa `tsx watch` e reinicia ao alterar seus arquivos ou dependências importadas. Reiniciar o servidor descarta a partida em memória, então mudanças no backend exigem reconectar e configurar a partida novamente. Mudanças na interface não reiniciam o servidor, embora algumas alterações possam recarregar a página.
 
 ## Reconexão e dados
 
@@ -99,7 +114,7 @@ Os testes cobrem validação de comandos, papéis, reconexão, nomes automático
 
 ## Referências e recursos
 
-- [PokéAPI](https://pokeapi.co/) e [documentação REST v2](https://pokeapi.co/docs/v2): referência para o futuro catálogo, ainda sem integração. Importações devem ser armazenadas localmente, sem exigir internet durante o jogo.
+- [PokéAPI](https://pokeapi.co/) e [documentação REST v2](https://pokeapi.co/docs/v2): referência do plano anterior, ainda sem integração; não é uma fonte definida para o futuro catálogo próprio.
 - Fontes Pokemon Solid e Hollow fornecidas pelo usuário em `pokemon.zip`, servidas em [apps/web/public/fonts](./apps/web/public/fonts). A Solid é usada em títulos e no nome do jogador; textos e controles comuns mantêm a fonte de sistema. O arquivo não inclui licença: verificar os termos antes de publicação/redistribuição.
 
 ## Estrutura

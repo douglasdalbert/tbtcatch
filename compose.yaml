@@ -1,0 +1,58 @@
+name: pokemon
+
+services:
+  app:
+    build:
+      context: .
+      target: ${CATCH_MODE:-dev}
+    environment:
+      CATCH_LAN_IP: ${CATCH_LAN_IP:-}
+      PORT: ${PORT:-3000}
+      WEB_PORT: ${WEB_PORT:-5173}
+    ports:
+      - "${CATCH_PUBLIC_PORT:-5173}:${CATCH_PUBLIC_PORT:-5173}"
+    init: true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    develop:
+      watch:
+        - action: sync
+          path: ./apps
+          target: /app/apps
+          initial_sync: true
+          ignore:
+            - "**/dist/"
+            - "**/node_modules/"
+            - "**/package.json"
+        - action: sync
+          path: ./packages
+          target: /app/packages
+          initial_sync: true
+          ignore:
+            - "**/node_modules/"
+            - "**/package.json"
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./package-lock.json
+        - action: rebuild
+          path: ./Dockerfile
+        - action: rebuild
+          path: ./apps/server/package.json
+        - action: rebuild
+          path: ./apps/web/package.json
+        - action: rebuild
+          path: ./packages/shared/package.json
+        - action: sync+restart
+          path: ./tsconfig.json
+          target: /app/tsconfig.json
