@@ -25,7 +25,7 @@ Este documento, mantido em `docs/projeto.md` no repositório, é a fonte de cont
 
 - Batalhas, dano, vida, cura funcional e regras dos ginásios.
 - Itens/cartas e seus efeitos; cadastro de cartas quando essa etapa for definida.
-- Condições de vitória e requisitos para entrar/concluir o Plateau.
+- Condições de vitória e requisitos para entrar no Plateau e concluir o jogo.
 - Dados com quantidades variáveis de faces, incluindo exemplos como d13.
 - Catálogo ampliado e regras adicionais.
 
@@ -79,11 +79,13 @@ No futuro haverá vários ginásios cadastrados por tipo; sortear um por tipo na
 - Nono destino, não obrigatoriamente central.
 - Mega-hexágono de raio 2: 19 células, sendo anel externo de 12 e interior de 7.
 - Anel externo destinado a caminho/eventos, com deslocamento de sentido único.
+- O jogador pode continuar circulando pelo anel em turnos sucessivos.
+- Dois hexágonos em polos opostos do anel permitem batalhar contra personagens do Plateau.
 - Interior reservado para QR code, situações, eventos e batalhas finais; não tratá-lo automaticamente como terreno livre.
 - Acesso único como ramificação da rede, sem exigir saída de volta.
 - Não depender do Plateau para conectar as oito cidades.
 - Preparar as células interiores para apresentação; não inventar a batalha final nesta etapa.
-- Definir na etapa de regras finais como se encerra o trajeto do anel e como começa a batalha, evitando confundir acesso único com um ciclo livre de retorno à rede.
+- As regras das batalhas e da conclusão do jogo serão definidas futuramente; chegar a um ponto de batalha não implica vitória nem encerra automaticamente o percurso.
 
 ### Distâncias e dimensionamento
 
@@ -118,12 +120,25 @@ Regiões podem representar fogo, floresta, gelo, água e demais tipos cadastrado
 
 ## 5. Turno e interface do celular
 
-Ao chegar a vez do jogador, abrir um componente/modal de jogo em tela completa, com ícones e quatro botões:
+Ao chegar a vez do jogador, abrir um componente/modal de jogo em tela completa, com ícones e botões:
 
 1. **Mover**: abre a área de dados ou, se o dado já foi lançado, retoma o movimento com seu resultado preservado.
-2. **Agir**: abre ações disponíveis na posição atual, incluindo captura.
-3. **Mochila**: mostra equipe de até seis Pokémon e espaço para itens futuros.
-4. **Encerrar turno**: exige confirmação em componente reutilizável.
+2. **Ações contextuais**: mostrar diretamente os botões permitidos pelo hexágono atual, como **Capturar** ou, futuramente, **Curar** no Centro Pokémon. Não haverá botão intermediário **Agir**.
+3. **Mochila**: mostra equipe de até seis Pokémon e espaço para itens futuros; consulta livre, sem limite de aberturas.
+4. **Concluir turno**: permanece disponível durante o turno do jogador, mesmo sem usar movimento ou ações, e exige confirmação em componente reutilizável.
+
+Usar uma coluna para até três botões e duas colunas para quatro ou mais, com espaçamentos uniformes e botões de mesma altura. Em telas estreitas ou com fonte ampliada, adaptar para uma coluna. Manter **Concluir turno** visível e acessível.
+
+### Consumo das ações
+
+- Cada ação tem uma utilização por turno; após concluída, seu botão fica desabilitado.
+- O limite é por ação, não um limite global: mover, tentar capturar e, futuramente, curar possuem consumos independentes.
+- Registrar o consumo por identidade da ação, não por instância do botão ou hexágono: mudar de local ou reabrir a tela não libera outra captura no mesmo turno.
+- Consultar a mochila e abrir/fechar modais não consomem ações. Limites de uso de itens serão definidos futuramente.
+- Movimento e ações podem ser intercalados: capturar antes de mover, mover até um encontro e capturar, ou agir e depois retomar os passos restantes.
+- Sucesso ou falha na captura consome a única tentativa de captura do turno, mas não encerra o turno nem impede outros botões disponíveis.
+- Somente **Concluir turno**, após confirmação, passa a vez. É permitido passar sem realizar qualquer ação.
+- No início do próximo turno do jogador, renovar os usos e o orçamento de movimento.
 
 Todos os modais podem ser fechados. Fechar uma interface não relança o dado, não apaga o progresso e não encerra implicitamente o turno. Ao voltar à tela inicial, mostrar botão flutuante no rodapé indicando que é a vez do jogador e permitindo reabrir o componente.
 
@@ -133,6 +148,9 @@ O estado da fase, resultado do dado, passos e ações consumidas pertence à par
 
 - O jogador escolhe sua cidade inicial; não impor cidade A.
 - D6 determina o orçamento de passos do turno.
+- Rolar o dado apenas uma vez para movimento por turno; todos os deslocamentos desse turno compartilham esse orçamento.
+- Fechar o movimento ou realizar uma ação não descarta os passos restantes nem permite outra rolagem.
+- **Mover** permanece utilizável para retomar enquanto houver passos disponíveis; fica desabilitado ao esgotá-los. Concluir o turno descarta os passos restantes.
 - Fora do Plateau, pode encerrar o movimento antes de gastar todos os passos.
 - Pode fazer desvios, repetir células e gastar mais passos para se deslocar menos.
 - Validar cada passo pela adjacência e transitabilidade reais.
@@ -141,27 +159,27 @@ O estado da fase, resultado do dado, passos e ações consumidas pertence à par
 - Calcular essa área por caminhos transitáveis, não por um círculo geométrico que atravesse lacunas ou obstáculos.
 - Não desenhar contornos especiais em todos os caminhos comuns: essa ideia foi descartada.
 - No anel do Plateau, seguir o sentido único e consumir exatamente o valor sorteado: percurso com destaque fraco e destino final com destaque mais forte e borda.
-- Resolver explicitamente transição para o Plateau e impossibilidade de completar os passos antes de habilitar o trajeto final; não permitir travamentos nem inventar retorno contra a direção.
+- O percurso do anel continua circularmente, inclusive ao ultrapassar um ponto de batalha; não existe fim de caminho que obrigue a voltar contra a direção.
+- No Plateau, ações ocorrem após completar o deslocamento obrigatório da rolagem; não permitir interromper o percurso para agir em um ponto intermediário.
+- Detalhar a transição da rota comum para o anel antes de implementá-la, preservando o orçamento e o sentido único.
 
-### Regras de turno ainda pendentes
+### Detalhes operacionais ainda pendentes
 
-O quarto botão foi confirmado, mas não houve confirmação sobre:
+As regras de consumo de ações e encerramento do turno estão definidas. Ainda precisam ser detalhados:
 
-- Quantas vezes pode mover ou agir por turno.
-- Se pode mover e capturar no mesmo turno e em qual ordem.
-- Se uma captura bem-sucedida encerra automaticamente o turno.
 - Como encerrar/restaurar uma rolagem física interrompida por pausa ou desconexão.
-
-Regra já definida: falhar uma captura passa a vez ao próximo jogador. Não usar a ausência das demais regras para permitir ações infinitas. A implementação da máquina de turnos depende de fechar esses pontos.
+- Fluxo de retomada da partida após pausa do mapa.
+- Transição da rota de acesso para o anel do Plateau, incluindo entrada com passos restantes.
 
 ## 6. Encontros, captura e evolução
 
 - Encontros visíveis, com espécie fixa no respectivo hexágono.
 - Cada espécie existe uma única vez por partida, incluindo evoluções.
 - Cada Pokémon possui poder fixo, tipo, faces aceitas de captura no d6 e eventual próxima evolução.
-- Estar sobre o hexágono do encontro é requisito para tentar capturar pela opção **Agir**.
-- Falha na captura encerra o turno e passa ao próximo jogador, onde quer que ele esteja.
+- Estar sobre o hexágono do encontro é requisito para mostrar e habilitar a ação direta **Capturar**, respeitando seu uso único por turno.
+- Falha na captura consome a tentativa, mas mantém o turno e os demais usos disponíveis.
 - Sucesso retira o encontro do mapa e atribui o Pokémon exclusivamente ao capturador.
+- Sucesso também consome a tentativa sem encerrar o turno. O jogador pode mover-se depois, se ainda tiver seu movimento disponível, e encerra pelo botão **Concluir turno**.
 - Limite de seis Pokémon: bloquear novas capturas ao atingir o limite; trocas e liberação ficam para depois.
 - Ao capturar, a próxima evolução surge em um novo hexágono distante e alcançável, com identificação visual.
 - Evolução pode aparecer em qualquer bioma.
@@ -229,20 +247,20 @@ Não incluir telemetria externa, autenticação, múltiplas salas simultâneas o
 
 ## 10. Todos e dependências
 
-1. **Fechar regras pendentes**: consumo de ações, sucesso da captura, retomada da pausa e transições do Plateau.
+1. **Detalhar fluxos operacionais pendentes**: rolagem interrompida, retomada da pausa e entrada no anel do Plateau. Consumo das ações e encerramento manual já definidos.
 2. **Criar base técnica e documentação**: workspaces, validação compartilhada, testes, comandos e documento versionado de continuidade.
 3. **Implementar catálogo e cadastro**: SQLite, validações, CRUD local, conteúdo inicial e seleção de sprites.
 4. **Implementar sala e protocolo**: QR, papéis, jogadores, reconexão, snapshots e pausa por mapa.
 5. **Implementar gerador e invariantes**: cidades completas, rede, Plateau, encontros, biomas e reservas de evolução.
 6. **Implementar visualização do mapa**: fullscreen, dimensões, zoom, arraste e marcadores.
 7. **Implementar componente de dados**: física d6, sensores, alternativa por toque, estabilização e ciclo da rolagem.
-8. **Implementar fluxo do jogador**: quatro botões, confirmação reutilizável, escolha de cidade, movimento, destaques e ações.
+8. **Implementar fluxo do jogador**: botões contextuais em grade adaptável, confirmação reutilizável, escolha de cidade, movimento retomável, destaques e usos independentes das ações.
 9. **Implementar captura e evolução**: unicidade, limite de equipe, captura atômica e novo encontro acessível.
 10. **Validar ponta a ponta e documentar operação**: múltiplos dispositivos, HTTPS, falhas, reconexão e critérios abaixo.
 
 Dependências:
 
-- Base depende das regras pendentes para definir contratos de turno sem suposições.
+- Contratos de turno devem preservar as regras confirmadas de uso único por ação, movimento retomável e encerramento manual; detalhar os fluxos pendentes antes dos componentes afetados.
 - Catálogo e sala dependem da base e podem avançar independentemente.
 - Gerador depende do catálogo e dos contratos compartilhados.
 - Mapa depende da sala e do gerador.
@@ -269,8 +287,14 @@ Dependências:
 - Rolagem e passos sobrevivem a fechar/reabrir modais e reconectar.
 - Sobreposição representa alcance real, incluindo obstáculos e sentidos de circulação.
 - Movimento comum permite parar antes; Plateau respeita direção e consumo exato.
-- Encerrar turno pede confirmação; cancelar não altera a partida.
-- Falha de captura passa o turno; comandos fora da vez são recusados com feedback.
+- Movimento usa uma única rolagem por turno e permite retomar passos após ações, sem renovar o orçamento.
+- Cada ação concluída desabilita seu botão até o próximo turno; trocar de hexágono ou reabrir a interface não renova o uso.
+- Capturar antes ou depois de mover funciona; sucesso e falha preservam os outros usos e não passam a vez.
+- **Concluir turno** pede confirmação, funciona sem ações prévias e descarta passos restantes; cancelar não altera a partida.
+- Mochila pode ser consultada repetidamente sem consumir ações.
+- Ações contextuais mudam conforme a posição, com grade de uma coluna até três botões e duas a partir de quatro, adaptada à largura e acessibilidade.
+- Anel do Plateau permite circulação contínua em sentido único e possui dois pontos opostos de batalha; regras de vitória permanecem fora desta etapa.
+- Comandos fora da vez são recusados com feedback.
 - Captura concorrente/repetida não duplica espécie nem ultrapassa seis Pokémon.
 - Reinício perde a partida, mas conserva o catálogo.
 
@@ -294,5 +318,10 @@ Dependências:
 - Não reduzir distâncias para o mapa caber.
 - Não exigir fullscreen nos celulares.
 - Não proteger o cadastro com chave/autenticação.
-- Não presumir captura apenas no turno posterior à chegada: isso depende das regras de consumo de ações ainda pendentes.
+- Captura pode ocorrer no mesmo turno da chegada, respeitando uma tentativa por turno.
+- Falha de captura não passa mais a vez automaticamente: o jogador encerra manualmente por **Concluir turno**, tanto no sucesso quanto na falha.
+- O botão intermediário **Agir** foi substituído por ações diretas do hexágono.
+- Mochila é de consulta livre; a regra de utilização única se aplica às ações de jogo, não à abertura de telas.
+- Movimento pode ser retomado depois de agir, com os passos restantes da mesma rolagem.
+- Plateau não tem fim de percurso definido: seu anel é circular, com dois pontos opostos para batalhas futuras.
 - Não implementar cura antes das regras de vida/batalha.
