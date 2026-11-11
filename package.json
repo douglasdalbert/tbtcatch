@@ -1,0 +1,22 @@
+{
+  "name": "tbtcatch",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "^22.18.0 || ^24.11.0 || >=26.0.0" },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently -k -n server,web \"npm run dev -w @catch/server\" \"npm run dev -w @catch/web\"",
+    "build": "npm run build -w @catch/server && npm run build -w @catch/web",
+    "start": "npm run start -w @catch/server",
+    "typecheck": "tsc -p tsconfig.tools.json && npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^22.19.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

@@ -2,9 +2,32 @@
 
 ## Objetivo e estado atual
 
-Projeto de fã para partidas familiares em rede local. O notebook hospeda o servidor, o tablet exibe o tabuleiro compartilhado e cada celular representa um jogador. O repositório está vazio; nenhuma implementação foi iniciada.
+Projeto de fã para partidas familiares em rede local. O notebook hospeda o servidor, o tablet exibe o tabuleiro compartilhado e cada celular representa um jogador.
 
 Este documento, mantido em `docs/projeto.md` no repositório, é a fonte de continuidade do desenvolvimento: requisitos confirmados, limites da primeira entrega, decisões técnicas propostas, pendências e critérios de validação. Deve ser atualizado conforme as decisões mudarem.
+
+### Progresso de implementação
+
+Primeiro marco implementado:
+
+- Workspaces TypeScript com interface React/Vite, servidor Node.js/Socket.IO e contratos compartilhados validados com Zod.
+- Uma única partida em memória; anfitrião prepara, inicia teste de conexão, retoma e encerra mediante confirmação reutilizável.
+- QR codes locais separados para mapa e jogador, com seleção do endereço de rede.
+- Sem salas ou identificadores na URL: QR codes levam diretamente a `/map` e `/player` no endereço completo do servidor. Ambos conectam automaticamente à partida única preparada no notebook.
+- Celulares recebem nome sequencial (**Jogador A**, **Jogador B** etc.) e personagem aleatório exclusivo.
+- Tela mobile simplificada: nome editável por toque e círculo do personagem no topo. Tocar no círculo abre seleção em modal; personagens ocupados não podem ser escolhidos. Consulta geral dos dispositivos/jogadores fica no notebook e tablet.
+- Seleção inicial de 12 personagens distintos da imagem fornecida, com recortes frontais explícitos; não oferecer quadros de animação como personagens diferentes.
+- O servidor valida edição de nome e exclusividade dos personagens, inclusive durante desconexões. Reconexão preserva o perfil; troca de personagem libera o anterior. Esgotamento dos personagens impede novas entradas com aviso.
+- Lista de jogadores e estados dos dispositivos sincronizada.
+- Chaves de reconexão por aba em `sessionStorage`, sem duplicar o jogador ao recarregar ou recuperar a conexão.
+- Tablet solicita fullscreen e informa sua área útil; sair do fullscreen ou desconectar pausa globalmente uma sessão iniciada.
+- Retomada confirmada como fluxo desta etapa: somente o anfitrião retoma, com mapa conectado e em fullscreen. Voltar ao fullscreen não retoma automaticamente.
+- Testes de sala, verificação de tipos, build de produção e teste de navegador com anfitrião, mapa e dois jogadores.
+- Script Linux `iniciar.sh`: verifica ferramentas, restaura dependências se necessário, compila e inicia em primeiro plano. Painel em `http://localhost:3000/host`, destinado também à futura integração do CRUD.
+
+O mapa atual é uma tela de conexão, não um tabuleiro. **Iniciar teste de conexão** não inicia turnos nem substitui a futura geração/prévia do mapa. Catálogo/SQLite, cidades, mapa procedural e mecânicas de jogo ainda não foram implementados; apenas a seleção inicial de sprites já está disponível.
+
+Execução e limitações operacionais estão em [README.md](../README.md). Próximo marco: catálogo inicial e cadastro; depois, geração do tabuleiro e visualização.
 
 ## 1. Escopo confirmado
 
@@ -14,7 +37,7 @@ Este documento, mantido em `docs/projeto.md` no repositório, é a fonte de cont
 - Uma partida ativa por servidor, com estado exclusivamente em memória.
 - Sala, QR code, entrada e reconexão dos jogadores.
 - Tablet em fullscreen, mapa procedural hexagonal e turnos sincronizados.
-- Cadastro do jogador, escolha de sprite e cidade inicial.
+- Perfil automático editável, escolha de sprite exclusivo e cidade inicial.
 - Movimento terrestre/aquático, encontros, captura e surgimento de evoluções.
 - D6 reutilizável, visual e físico em 3D, operado por movimento do celular ou por toque.
 - Catálogo pequeno inicial, persistente, com painel CRUD separado.
@@ -31,13 +54,13 @@ Este documento, mantido em `docs/projeto.md` no repositório, é a fonte de cont
 
 Não implementar multiplicadores de tipo: o poder dos Pokémon será fixo. Tipos orientam biomas, encontros iniciais e seleção de ginásios.
 
-## 2. Dispositivos, sala e ciclo da partida
+## 2. Dispositivos e ciclo da partida única
 
 1. Anfitrião inicia o servidor no notebook e abre o controle local.
-2. Cria uma sala; o servidor informa endereço de rede local e QR code.
+2. Prepara a partida única; o painel informa endereço de rede local e QR codes separados para tablet e celulares, sem identificação de sala.
 3. Tablet entra como mapa e informa sua área útil após entrar em fullscreen.
 4. Anfitrião gera e inspeciona o mapa antes de iniciar os turnos.
-5. Celulares entram pelo QR, escolhem nome, sprite e uma das oito cidades para começar.
+5. Celulares entram automaticamente pelo QR com nome padrão sequencial e sprite aleatório exclusivo; podem editar o perfil pelo topo da tela. A escolha de uma das oito cidades será implementada junto do mapa.
 6. Anfitrião inicia a partida com os jogadores preparados.
 7. Enquanto o servidor permanecer ativo, reconexão recupera o jogador e seu estado.
 8. Reiniciar o servidor ou encerrar a partida descarta o jogo; não existe salvar/carregar.
@@ -54,7 +77,7 @@ Catálogo não é estado de partida. Ele persiste, mas cada partida utiliza uma 
 - Perda da conexão do mapa também deve pausar para impedir avanço sem visualização.
 - Voltar ao fullscreen não regenera o mapa.
 - Celulares não dependem de fullscreen.
-- Definir explicitamente o fluxo de retomada antes da implementação: recomendação de retomar mediante confirmação do anfitrião, somente com mapa reconectado e em fullscreen.
+- Retomar por comando explícito do anfitrião, somente com mapa reconectado e em fullscreen; não retomar automaticamente.
 - Se o navegador do tablet não suportar fullscreen, informar incompatibilidade; não contornar silenciosamente a exigência.
 
 ## 3. Estrutura do tabuleiro
@@ -168,7 +191,6 @@ O estado da fase, resultado do dado, passos e ações consumidas pertence à par
 As regras de consumo de ações e encerramento do turno estão definidas. Ainda precisam ser detalhados:
 
 - Como encerrar/restaurar uma rolagem física interrompida por pausa ou desconexão.
-- Fluxo de retomada da partida após pausa do mapa.
 - Transição da rota de acesso para o anel do Plateau, incluindo entrada com passos restantes.
 
 ## 6. Encontros, captura e evolução
@@ -223,9 +245,33 @@ Validar referências, ciclos evolutivos, exclusões de registros relacionados e 
 
 Painel separado, dispensável durante o jogo. Sem contas, autenticação ou chave, conforme solicitado. Proposta de exposição: painel e operações de cadastro acessíveis somente no notebook por interface local; jogo e mapa disponíveis na rede local. Não publicar o serviço na internet.
 
-O anexo de sprites é uma referência fornecida pelo usuário, não um atlas já recortado e mapeado. Selecionar manualmente um conjunto inicial e registrar os recortes corretos; não assumir células uniformes para a imagem inteira. Preservar a imagem original. Não buscar imagens/dados automaticamente em serviços externos.
+O anexo de sprites é uma referência fornecida pelo usuário, não um atlas já recortado e mapeado. Selecionar manualmente um conjunto inicial e registrar os recortes corretos; não assumir células uniformes para a imagem inteira. Preservar a imagem original. A seleção inicial já utiliza recortes explícitos. Não buscar imagens/dados automaticamente durante a partida.
 
 Começar com catálogo pequeno e explícito, com cadeias evolutivas suficientes para demonstrar o fluxo e conteúdo coerente com os oito tipos de ginásio. Conteúdo não cadastrado não deve ser apresentado como funcional.
+
+### Referência de dados: PokéAPI
+
+Fonte REST indicada pelo usuário para futuras consultas e preenchimento do catálogo:
+
+- Site: https://pokeapi.co/
+- Documentação REST v2: https://pokeapi.co/docs/v2
+- Base da API: `https://pokeapi.co/api/v2/`
+- `pokemon/{id ou nome}/`: tipos, sprites e atributos do Pokémon.
+- `pokemon-species/{id ou nome}/`: informações da espécie e referência à cadeia evolutiva.
+- `evolution-chain/{id}/`: cadeia evolutiva.
+
+A documentação informa acesso de leitura via GET, sem autenticação, e solicita cache local dos recursos consultados. Uma futura importação deve ocorrer explicitamente na preparação/cadastro, persistindo os dados e recursos necessários localmente. A partida deve continuar independente de internet; não consultar a API nos celulares a cada ação.
+
+Esta referência não implementa uma integração nem define as regras do jogo: poder fixo, faces aceitas na captura e demais ajustes continuam sendo configurações do catálogo local, não uma conversão automática dos atributos oficiais.
+
+### Tipografia temática
+
+- Arquivo `pokemon.zip` fornecido pelo usuário, contendo variantes **Pokemon Solid** e **Pokemon Hollow**, armazenadas em `apps/web/public/fonts/`.
+- Usar a Solid para títulos de destaque, nome do jogador no celular e, quando apropriado, nomes de Pokémon e chamadas como **Batalha**.
+- A variante Hollow fica disponível para composição visual futura, sem impor contornos em toda a interface.
+- É uma fonte chamativa: manter textos corridos, instruções, formulários e controles comuns em fonte de sistema legível.
+- Fontes servidas localmente com `font-display: swap` e fallback de sistema.
+- O arquivo fornecido não contém licença ou termos de distribuição; verificar esses termos antes de publicar ou redistribuir o projeto.
 
 ## 9. Arquitetura técnica proposta
 
@@ -233,13 +279,13 @@ Começar com catálogo pequeno e explícito, com cadeias evolutivas suficientes 
 - Cliente React + Vite, com entradas/rotas para anfitrião, cadastro, mapa e jogador.
 - Servidor Node.js com API HTTP e Socket.IO para sincronização e reconexão.
 - Tipos e validação de comandos compartilhados, com validação efetiva no servidor.
-- SQLite para catálogo; memória para sala, tabuleiro, jogadores e turnos.
+- SQLite para catálogo; memória para partida única, tabuleiro, jogadores e turnos.
 - Renderização do tabuleiro em Canvas 2D para controlar o custo em mapas maiores.
 - Three.js e motor de física adequado, como Rapier, no componente isolado do dado.
 - QR code gerado localmente; sem CDN ou dependência de internet durante a partida.
 - Vitest para regras e gerador; Playwright para integração entre dispositivos.
 
-Preferir essas ferramentas somente se compatíveis com o ambiente verificado durante a implementação. Não há dependências existentes a preservar.
+Preferir essas ferramentas somente se compatíveis com o ambiente verificado durante a implementação. A base TypeScript, React/Vite, Node.js/Socket.IO, Zod, Vitest e Playwright já está implementada. SQLite, Canvas 2D e física 3D pertencem aos próximos marcos.
 
 O servidor é a autoridade sobre comandos, posição, orçamento de passos, inventário, ocupação, encontros e pausa. Associar comandos a identificadores para impedir efeitos duplicados em reenvios. Reconexões recuperam um snapshot e não criam um novo jogador.
 
@@ -247,10 +293,10 @@ Não incluir telemetria externa, autenticação, múltiplas salas simultâneas o
 
 ## 10. Todos e dependências
 
-1. **Detalhar fluxos operacionais pendentes**: rolagem interrompida, retomada da pausa e entrada no anel do Plateau. Consumo das ações e encerramento manual já definidos.
-2. **Criar base técnica e documentação**: workspaces, validação compartilhada, testes, comandos e documento versionado de continuidade.
+1. **Detalhar fluxos operacionais pendentes**: rolagem interrompida e entrada no anel do Plateau. Consumo das ações, encerramento manual e retomada pelo anfitrião já definidos.
+2. **Criar base técnica e documentação — concluído**: workspaces, validação compartilhada, testes, comandos e documento versionado de continuidade.
 3. **Implementar catálogo e cadastro**: SQLite, validações, CRUD local, conteúdo inicial e seleção de sprites.
-4. **Implementar sala e protocolo**: QR, papéis, jogadores, reconexão, snapshots e pausa por mapa.
+4. **Implementar partida única e protocolo — primeiro marco concluído**: QR sem parâmetros de sala, entrada automática, perfil editável com personagem exclusivo, papéis, reconexão, snapshots e pausa por mapa. A idempotência dos futuros comandos de jogo deve ser implementada junto das regras; os contratos atuais ainda não representam esses comandos.
 5. **Implementar gerador e invariantes**: cidades completas, rede, Plateau, encontros, biomas e reservas de evolução.
 6. **Implementar visualização do mapa**: fullscreen, dimensões, zoom, arraste e marcadores.
 7. **Implementar componente de dados**: física d6, sensores, alternativa por toque, estabilização e ciclo da rolagem.
@@ -261,11 +307,11 @@ Não incluir telemetria externa, autenticação, múltiplas salas simultâneas o
 Dependências:
 
 - Contratos de turno devem preservar as regras confirmadas de uso único por ação, movimento retomável e encerramento manual; detalhar os fluxos pendentes antes dos componentes afetados.
-- Catálogo e sala dependem da base e podem avançar independentemente.
+- Catálogo e protocolo da partida dependem da base e podem avançar independentemente.
 - Gerador depende do catálogo e dos contratos compartilhados.
-- Mapa depende da sala e do gerador.
-- Dado depende da base e pode avançar em paralelo com catálogo/sala/gerador.
-- Fluxo do jogador depende de sala, mapa e dado.
+- Mapa depende do protocolo da partida e do gerador.
+- Dado depende da base e pode avançar em paralelo com catálogo/protocolo/gerador.
+- Fluxo do jogador depende do protocolo da partida, mapa e dado.
 - Captura/evolução depende de catálogo, gerador e fluxo do jogador.
 - Validação integrada depende dos componentes implementados.
 
