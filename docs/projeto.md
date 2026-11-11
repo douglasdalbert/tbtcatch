@@ -4,7 +4,7 @@
 
 Jogo para partidas familiares em rede local. O notebook hospeda o servidor, o tablet exibe o tabuleiro compartilhado e cada celular representa um jogador.
 
-**Nova direção:** o jogo se chamará Terra e terá identidade própria, com criaturas originais inspiradas na cultura, no folclore, nos animais e nos biomas brasileiros. O protótipo existente ainda contém referências e recursos de Pokémon; sua substituição será feita em etapas futuras, não está concluída. As referências a Pokémon neste documento registram o plano anterior e devem ser revistas na transição, sem pressupor que nomes e elementos específicos serão mantidos.
+**Direção do projeto:** Terra terá identidade própria, com criaturas originais inspiradas no planeta, nos biomas e na diversidade natural e cultural do Brasil. Referências, fontes e sprites de outras franquias não fazem parte do projeto. Os emblemas de perfil atuais são provisórios; as criaturas e os recursos visuais do jogo serão criados para Terra.
 
 Este documento, mantido em `docs/projeto.md` no repositório, é a fonte de continuidade do desenvolvimento: requisitos confirmados, limites da primeira entrega, decisões técnicas propostas, pendências e critérios de validação. Deve ser atualizado conforme as decisões mudarem.
 
@@ -18,7 +18,7 @@ Primeiro marco implementado:
 - Sem salas ou identificadores na URL: QR codes levam diretamente a `/map` e `/player` no endereço completo do servidor. Ambos conectam automaticamente à partida única preparada no notebook.
 - Celulares recebem nome sequencial (**Jogador A**, **Jogador B** etc.) e personagem aleatório exclusivo.
 - Tela mobile simplificada: nome editável por toque e círculo do personagem no topo. Tocar no círculo abre seleção em modal; personagens ocupados não podem ser escolhidos. Consulta geral dos dispositivos/jogadores fica no notebook e tablet.
-- Seleção inicial de 12 personagens distintos da imagem fornecida, com recortes frontais explícitos; não oferecer quadros de animação como personagens diferentes.
+- Seleção inicial de 12 emblemas de perfil provisórios, originais e coloridos; não depende de spritesheets externas.
 - O servidor valida edição de nome e exclusividade dos personagens, inclusive durante desconexões. Reconexão preserva o perfil; troca de personagem libera o anterior. Esgotamento dos personagens impede novas entradas com aviso.
 - Lista de jogadores e estados dos dispositivos sincronizada.
 - Conexão ao notebook indicada por bolinha após o título: verde conectado/pronto, vermelho desconectado e amarelo recuperando sessão. Sem texto “Conectado ao notebook”, linha de dispositivo, apresentação do tablet ou dimensões do mapa. Manter descrição acessível e tooltip; a validação de fullscreen continua funcionando sem indicador de tablet.
@@ -47,7 +47,7 @@ Execução e limitações operacionais estão em [README.md](../README.md). Pró
 - D6 reutilizável, visual e físico em 3D, operado por movimento do celular ou por toque.
 - Catálogo pequeno inicial, persistente, com painel CRUD separado.
 - Interface inicial de mochila, sem regras funcionais de itens.
-- Centros Pokémon, ginásios e Plateau representados no mapa.
+- Centros de Recuperação, ginásios e Plateau representados no mapa.
 
 ### Etapas posteriores
 
@@ -57,7 +57,24 @@ Execução e limitações operacionais estão em [README.md](../README.md). Pró
 - Dados com quantidades variáveis de faces, incluindo exemplos como d13.
 - Catálogo ampliado e regras adicionais.
 
-Não implementar multiplicadores de tipo: o poder dos Pokémon será fixo. Tipos orientam biomas, encontros iniciais e seleção de ginásios.
+Não implementar multiplicadores multiplicativos de tipo: o poder dos animais será fixo e as vantagens de tipo são bônus aditivos, conforme a seção **Tipos elementais e bônus**. Tipos orientam biomas, encontros iniciais e seleção de ginásios.
+
+### Tipos elementais e bônus
+
+Os tipos disponíveis são oito: **Água, Fogo, Planta, Elétrico, Ar, Rocha, Manhã e Noite**. Os animais (as criaturas próprias de Terra) podem combinar tipos — por exemplo, um peixe voador é Água e Ar. Por enquanto, o ataque de um animal tem o mesmo tipo do animal.
+
+Vantagens (bom contra):
+
+- Água → Fogo e Rocha
+- Fogo → Planta e Ar
+- Planta → Água e Rocha
+- Elétrico → Água e Ar
+- Ar → Planta e Elétrico
+- Rocha → Elétrico e Fogo
+- Manhã → Noite
+- Noite → Manhã
+
+O bônus de ataque/defesa é configurado por `GAME_TYPE_BONUS` (padrão `0.1`, ou seja, ±10%). Os bônus são aditivos e somados por tipo do defensor: um ataque Elétrico contra um animal Água e Ar aplica `1 + 0.1 + 0.1`; contra um animal Rocha e Água aplica `1 + 0.1 − 0.1`, porque Rocha resiste a Elétrico. Para cada tipo do defensor vale um único efeito, com a vantagem do atacante em primeiro lugar; por isso, em pares mutuamente fortes (Ar↔Elétrico, Manhã↔Noite) o ataque de qualquer um dos lados recebe `+bônus`. Na interface, cada bônus aparece com sinal e dois dígitos, como `+10`, `-10` ou `+00`. A implementação fica em `packages/shared/src/elements.ts`.
 
 ## 2. Dispositivos e ciclo da partida única
 
@@ -89,18 +106,17 @@ Catálogo não é estado de partida. Ele persiste, mas cada partida utiliza uma 
 
 ### Cidades
 
-São oito cidades, inicialmente identificadas por A–H, com oito tipos de ginásio distintos, sem repetição.
+São oito cidades, inicialmente identificadas por A–H. A quantidade de ginásios é configurável por `GAME_GYM_COUNT`, com padrão `2`, e não é vinculada à quantidade de cidades. Exatamente essa quantidade deve aparecer no mapa; a distribuição entre as cidades e os tipos disponíveis será definida pelo gerador.
 
 Cada cidade possui:
 
 - Núcleo de 3 hexágonos próximos e conectados.
-- 1 hexágono de ginásio adjacente ao núcleo, em posição variável.
-- 1 hexágono de Centro Pokémon adjacente ao núcleo e distinto do ginásio.
+- 1 hexágono de Centro de Recuperação adjacente ao núcleo.
 - 2 conexões de caminhos em lados/acessos distintos, utilizáveis para entrada e saída.
 
-Os caminhos não podem apenas se fundir imediatamente em um acesso único. A rede deve permitir as duas conexões de cada cidade. O núcleo, o ginásio e o Centro Pokémon não podem se sobrepor a outros locais.
+Os caminhos não podem apenas se fundir imediatamente em um acesso único. A rede deve permitir as duas conexões de cada cidade. O núcleo, os ginásios selecionados e os Centros de Recuperação não podem se sobrepor a outros locais.
 
-No futuro haverá vários ginásios cadastrados por tipo; sortear um por tipo na criação do mapa. O nome da cidade deriva do ginásio escolhido e será mostrado em uma placa pequena ou rótulo legível.
+No futuro haverá vários ginásios cadastrados por tipo; o gerador selecionará `GAME_GYM_COUNT` ginásios (padrão `2`) para cada mapa. O nome da cidade pode derivar do ginásio escolhido e será mostrado em uma placa pequena ou rótulo legível.
 
 ### Plateau
 
@@ -119,7 +135,7 @@ No futuro haverá vários ginásios cadastrados por tipo; sortear um por tipo na
 
 - Coordenadas axiais e distância hexagonal geométrica, distinta da distância pelos caminhos.
 - Cidades: pelo menos 10 entre as células mais próximas de seus conjuntos reservados.
-- A inclusão do Centro Pokémon amplia o conjunto reservado; propor incluí-lo na validação de distância para preservar a separação, sem medir apenas pelos centros das cidades.
+- A inclusão do Centro de Recuperação amplia o conjunto reservado; incluí-lo na validação de distância para preservar a separação, sem medir apenas pelos centros das cidades.
 - Encontros: distância geométrica mínima de 5 entre pontos.
 - Evolução: novo ponto a pelo menos 10 da posição da captura.
 - Dimensionar pela área útil em pixels do tablet, não por uma estimativa falsa de tamanho físico.
@@ -132,7 +148,7 @@ No futuro haverá vários ginásios cadastrados por tipo; sortear um por tipo na
 
 Ordem lógica, respeitando o modelo atualizado de cidade:
 
-1. Definir dimensões, semente, oito tipos distintos e ginásios disponíveis.
+1. Definir dimensões, semente, tipos disponíveis e ginásios cadastrados; incluir exatamente o número definido por `GAME_GYM_COUNT` (padrão `2`).
 2. Reservar os conjuntos completos das oito cidades e o Plateau com suas áreas de exclusão.
 3. Conectar as oito cidades em uma rede de duas conexões distintas por cidade; um ciclo é a base inicial mais simples.
 4. Conectar o Plateau por uma ramificação de acesso único.
@@ -144,15 +160,15 @@ Ordem lógica, respeitando o modelo atualizado de cidade:
 
 Usar geração determinística por semente, tentativas limitadas e diagnóstico de inviabilidade. Modelar separadamente terreno/bioma, local especial, caminho e encontro, para permitir combinações sem confundir regras.
 
-Regiões podem representar fogo, floresta, gelo, água e demais tipos cadastrados. Não é necessário haver 18 regiões na primeira entrega: o catálogo inicial e sua cobertura devem ser explícitos.
+Regiões podem representar os tipos cadastrados, como água, fogo, planta, elétrico, ar, rocha, manhã e noite. O catálogo inicial e sua cobertura devem ser explícitos.
 
 ## 5. Turno e interface do celular
 
 Ao chegar a vez do jogador, abrir um componente/modal de jogo em tela completa, com ícones e botões:
 
 1. **Mover**: abre a área de dados ou, se o dado já foi lançado, retoma o movimento com seu resultado preservado.
-2. **Ações contextuais**: mostrar diretamente os botões permitidos pelo hexágono atual, como **Capturar** ou, futuramente, **Curar** no Centro Pokémon. Não haverá botão intermediário **Agir**.
-3. **Mochila**: mostra equipe de até seis Pokémon e espaço para itens futuros; consulta livre, sem limite de aberturas.
+2. **Ações contextuais**: mostrar diretamente os botões permitidos pelo hexágono atual, como **Capturar** ou, futuramente, **Recuperar** no Centro de Recuperação. Não haverá botão intermediário **Agir**.
+3. **Mochila**: mostra equipe de até seis criaturas e espaço para itens futuros; consulta livre, sem limite de aberturas.
 4. **Concluir turno**: permanece disponível durante o turno do jogador, mesmo sem usar movimento ou ações, e exige confirmação em componente reutilizável.
 
 Usar uma coluna para até três botões e duas colunas para quatro ou mais, com espaçamentos uniformes e botões de mesma altura. Em telas estreitas ou com fonte ampliada, adaptar para uma coluna. Manter **Concluir turno** visível e acessível.
@@ -202,17 +218,17 @@ As regras de consumo de ações e encerramento do turno estão definidas. Ainda 
 
 - Encontros visíveis, com espécie fixa no respectivo hexágono.
 - Cada espécie existe uma única vez por partida, incluindo evoluções.
-- Cada Pokémon possui poder fixo, tipo, faces aceitas de captura no d6 e eventual próxima evolução.
+- Cada criatura possui poder fixo, tipo, faces aceitas de captura no d6 e eventual próxima evolução.
 - Estar sobre o hexágono do encontro é requisito para mostrar e habilitar a ação direta **Capturar**, respeitando seu uso único por turno.
 - Falha na captura consome a tentativa, mas mantém o turno e os demais usos disponíveis.
-- Sucesso retira o encontro do mapa e atribui o Pokémon exclusivamente ao capturador.
+- Sucesso retira o encontro do mapa e atribui a criatura exclusivamente ao capturador.
 - Sucesso também consome a tentativa sem encerrar o turno. O jogador pode mover-se depois, se ainda tiver seu movimento disponível, e encerra pelo botão **Concluir turno**.
-- Limite de seis Pokémon: bloquear novas capturas ao atingir o limite; trocas e liberação ficam para depois.
+- Limite de seis criaturas: bloquear novas capturas ao atingir o limite; trocas e liberação ficam para depois.
 - Ao capturar, a próxima evolução surge em um novo hexágono distante e alcançável, com identificação visual.
 - Evolução pode aparecer em qualquer bioma.
 - O novo ponto pode exigir ramal de acesso; não ocupar reservas, sobrepor locais nem quebrar conexões.
 - Aplicar a distância mínima entre encontros e a distância de 10 da captura também nessa geração dinâmica.
-- Não substituir automaticamente o Pokémon anterior: sua evolução é outro Pokémon a capturar.
+- Não substituir automaticamente a criatura anterior: sua evolução é outra criatura a capturar.
 - Reservar posições/capacidade durante a geração inicial para garantir evoluções previstas; não efetivar captura e depois descobrir silenciosamente que não existe lugar para a evolução.
 - Resolver captura, unicidade, equipe e novo encontro de forma atômica no servidor.
 
@@ -241,43 +257,24 @@ Persistência proposta: SQLite, somente para conteúdo.
 
 Cadastros iniciais:
 
-- Tipos/biomas e suas propriedades visuais.
-- Pokémon: identificador único, nome, tipo, poder fixo, conjunto não vazio de faces de captura entre 1 e 6, referência visual e próxima evolução.
+- Tipos/biomas e suas propriedades visuais, limitados aos oito tipos elementais definidos.
+- Animais: identificador único, nome, um ou mais tipos elementais, poder fixo, conjunto não vazio de faces de captura entre 1 e 6, referência visual e próxima evolução.
 - Ginásios: nome e tipo; permitir várias opções por tipo.
 - Seleção de personagens/sprites.
 
-Validar referências, ciclos evolutivos, exclusões de registros relacionados e disponibilidade de oito tipos distintos para gerar a partida.
+Validar referências, ciclos evolutivos, exclusões de registros relacionados e tipos suficientes dentre os oito definidos para gerar a partida.
 
 Painel separado, dispensável durante o jogo. Sem contas, autenticação ou chave, conforme solicitado. Proposta de exposição: painel e operações de cadastro acessíveis somente no notebook por interface local; jogo e mapa disponíveis na rede local. Não publicar o serviço na internet.
 
 O anexo de sprites é uma referência fornecida pelo usuário, não um atlas já recortado e mapeado. Selecionar manualmente um conjunto inicial e registrar os recortes corretos; não assumir células uniformes para a imagem inteira. Preservar a imagem original. A seleção inicial já utiliza recortes explícitos. Não buscar imagens/dados automaticamente durante a partida.
 
-Começar com catálogo pequeno e explícito, com cadeias evolutivas suficientes para demonstrar o fluxo e conteúdo coerente com os oito tipos de ginásio. Conteúdo não cadastrado não deve ser apresentado como funcional.
+Começar com catálogo pequeno e explícito, com cadeias evolutivas suficientes para demonstrar o fluxo e conteúdo coerente com os tipos de ginásio cadastrados. Conteúdo não cadastrado não deve ser apresentado como funcional.
 
-### Referência de dados: PokéAPI
+### Identidade visual
 
-Referência do plano anterior, não uma integração implementada nem uma fonte definida para o futuro catálogo de criaturas originais:
-
-- Site: https://pokeapi.co/
-- Documentação REST v2: https://pokeapi.co/docs/v2
-- Base da API: `https://pokeapi.co/api/v2/`
-- `pokemon/{id ou nome}/`: tipos, sprites e atributos do Pokémon.
-- `pokemon-species/{id ou nome}/`: informações da espécie e referência à cadeia evolutiva.
-- `evolution-chain/{id}/`: cadeia evolutiva.
-
-A documentação informa acesso de leitura via GET, sem autenticação, e solicita cache local dos recursos consultados. Para o futuro catálogo próprio, guardar os dados e recursos necessários localmente; a partida deve continuar independente de internet.
-
-Esta referência não implementa uma integração nem define as regras do jogo: poder fixo, faces aceitas na captura e demais ajustes continuam sendo configurações do catálogo local, não uma conversão automática dos atributos oficiais.
-
-### Tipografia temática atual
-
-- Arquivo `pokemon.zip` fornecido pelo usuário, contendo variantes **Pokemon Solid** e **Pokemon Hollow**, armazenadas em `apps/web/public/fonts/`.
-- Usar a Solid para títulos de destaque, nome do jogador no celular e, quando apropriado, nomes de Pokémon e chamadas como **Batalha**.
-- A variante Hollow fica disponível para composição visual futura, sem impor contornos em toda a interface.
-- É uma fonte chamativa: manter textos corridos, instruções, formulários e controles comuns em fonte de sistema legível.
-- Fontes servidas localmente com `font-display: swap` e fallback de sistema.
-- O arquivo fornecido não contém licença ou termos de distribuição; verificar esses termos antes de publicar ou redistribuir o projeto.
-- Na transição para a identidade própria, revisar e substituir a tipografia temática atual conforme necessário; isso ainda não foi implementado.
+- A interface usa fontes de sistema; não há tipografia temática externa.
+- Os perfis usam emblemas SVG provisórios com paletas inspiradas em elementos naturais.
+- Criaturas, sprites, animações e identidade visual definitivos serão criados para Terra, sem reaproveitar recursos de outras franquias.
 
 ### Criação de criaturas, sprites e animações próprias
 
@@ -337,8 +334,8 @@ Dependências:
 
 ### Geração e geometria
 
-- Exatamente oito cidades com tipos de ginásio distintos e um Plateau de 19 células.
-- Cada cidade tem núcleo de 3, ginásio, Centro Pokémon e duas conexões distintas.
+- Exatamente oito cidades, a quantidade de ginásios definida em `GAME_GYM_COUNT` (padrão `2`) e um Plateau de 19 células.
+- Cada cidade tem núcleo de 3, Centro de Recuperação e duas conexões distintas; o mapa contém a quantidade de ginásios definida em `GAME_GYM_COUNT` (padrão `2`).
 - Sem sobreposições e com distância mínima de 10 entre conjuntos de cidades.
 - Rede das cidades continua conectada sem usar o Plateau como passagem.
 - Encontros acessíveis e separados por pelo menos 5; evolução pelo menos 10 da captura.
@@ -359,7 +356,7 @@ Dependências:
 - Ações contextuais mudam conforme a posição, com grade de uma coluna até três botões e duas a partir de quatro, adaptada à largura e acessibilidade.
 - Anel do Plateau permite circulação contínua em sentido único e possui dois pontos opostos de batalha; regras de vitória permanecem fora desta etapa.
 - Comandos fora da vez são recusados com feedback.
-- Captura concorrente/repetida não duplica espécie nem ultrapassa seis Pokémon.
+- Captura concorrente/repetida não duplica espécie nem ultrapassa seis criaturas.
 - Reinício perde a partida, mas conserva o catálogo.
 
 ### Dispositivos e operação
@@ -374,7 +371,7 @@ Dependências:
 
 ## 12. Decisões que substituíram sugestões anteriores
 
-- Cidade não é um ginásio de três células: são três células de cidade mais ginásio e Centro Pokémon separados.
+- Ginásios não são parte obrigatória de cada cidade: são três células de cidade mais um Centro de Recuperação, com ginásios posicionados conforme a configuração global.
 - Não iniciar todos na cidade A: cada jogador escolhe a sua.
 - Movimento comum não exige consumir todo o dado; Plateau exige.
 - Não destacar todas as bordas de rotas comuns: usar sobreposição de alcance.

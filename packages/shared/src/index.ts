@@ -1,6 +1,15 @@
 import { z } from "zod";
 import { characterIds, type CharacterId } from "./characters";
 export { characterIds, characters, type CharacterId } from "./characters";
+export {
+  attackMultiplier,
+  elementNames,
+  elementTypes,
+  formatBonus,
+  strongAgainst,
+  typeBonus,
+  type ElementType,
+} from "./elements";
 
 export const credentialsSchema = z.object({
   role: z.enum(["host", "map", "player"]),

@@ -1,4 +1,4 @@
-name: pokemon
+name: terra
 
 services:
   app:
@@ -9,6 +9,9 @@ services:
       CATCH_LAN_IP: ${CATCH_LAN_IP:-}
       PORT: ${PORT:-3000}
       WEB_PORT: ${WEB_PORT:-5173}
+      NODE_ENV: ${NODE_ENV:-development}
+      GAME_GYM_COUNT: ${GAME_GYM_COUNT:-2}
+      GAME_TYPE_BONUS: ${GAME_TYPE_BONUS:-0.1}
     ports:
       - "${CATCH_PUBLIC_PORT:-5173}:${CATCH_PUBLIC_PORT:-5173}"
     init: true

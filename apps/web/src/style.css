@@ -1,17 +1,3 @@
-@font-face {
-  font-family: "Pokemon Solid";
-  src: url("/fonts/pokemon-solid.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Pokemon Hollow";
-  src: url("/fonts/pokemon-hollow.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
 :root {
   font-family: system-ui, sans-serif;
   color: #e7f2ef;
@@ -25,7 +11,7 @@ body { margin: 0; min-width: 280px; }
 main { max-width: 1080px; margin: auto; padding: 32px 20px 60px; }
 header { margin-bottom: 32px; }
 h1 { font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.2; margin: 12px 0; }
-h1, .display-title { font-family: "Pokemon Solid", system-ui, sans-serif; font-weight: 400; line-height: 1.6; letter-spacing: .04em; }
+h1, .display-title { font-family: system-ui, sans-serif; font-weight: 800; line-height: 1.3; letter-spacing: .02em; }
 h2 { font-size: 1.25rem; margin-top: 0; }
 p { color: #bed0d0; }
 a { color: #97e3ce; overflow-wrap: anywhere; }
@@ -70,7 +56,7 @@ dialog::backdrop { background: #000a; }
 .character { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 .mobile-player { max-width: 600px; padding-top: 20px; }
 .player-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
-.player-name { background: none; color: #f0c675; padding: 8px 0; text-align: left; min-width: 0; overflow-wrap: anywhere; font-size: 1.4rem; font-family: "Pokemon Solid", system-ui, sans-serif; font-weight: 400; letter-spacing: .04em; }
+.player-name { background: none; color: #f0c675; padding: 8px 0; text-align: left; min-width: 0; overflow-wrap: anywhere; font-size: 1.4rem; font-weight: 800; letter-spacing: .02em; }
 .player-name span { display: block; font-family: system-ui, sans-serif; letter-spacing: normal; font-size: .75rem; font-weight: 400; color: #bed0d0; }
 .character-circle { border-radius: 50%; width: 76px; height: 76px; flex-shrink: 0; padding: 8px; background: #355563; border: 2px solid #97e3ce; }
 .modal-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }

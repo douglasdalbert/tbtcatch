@@ -1,14 +1,14 @@
-# Catch — tabuleiro em família
+# Terra — tabuleiro em família
 
 Protótipo web local de um tabuleiro para partidas em família. O notebook hospeda uma única partida, o tablet exibe o mapa e os celulares representam os jogadores. Não há seleção ou identificação de salas nos links.
 
-O jogo se chamará **Terra** e seguirá para uma identidade própria, com criaturas originais inspiradas no Brasil. O protótipo atual ainda contém referências e recursos de Pokémon, cuja substituição será planejada futuramente. O processo proposto para criar imagens e animações está em [docs/projeto.md](./docs/projeto.md#criação-de-criaturas-sprites-e-animações-próprias).
+**Terra** terá identidade própria, com criaturas originais inspiradas no planeta, nos biomas e na diversidade natural e cultural do Brasil. O processo de criação de imagens e animações está em [docs/projeto.md](./docs/projeto.md#criação-de-criaturas-sprites-e-animações-próprias).
 
 ## Estado atual
 
 Primeiro marco implementado: partida em memória, entrada automática por QR codes separados para tablet e celulares, perfil simplificado no celular, sincronização, reconexão e pausa global quando o mapa sai do fullscreen ou desconecta.
 
-**Ainda não há tabuleiro jogável.** Mapa procedural, catálogo editável, cidades, turnos, dados, mochila e capturas serão implementados nas próximas etapas. Há uma seleção inicial de 12 personagens da imagem fornecida. O botão **Iniciar teste de conexão** apenas valida a infraestrutura; não inicia turnos.
+**Ainda não há tabuleiro jogável.** Mapa procedural, catálogo editável, cidades, turnos, dados, mochila e capturas serão implementados nas próximas etapas. Há 12 emblemas provisórios originais para os perfis dos jogadores; a arte definitiva do jogo será criada para Terra. O botão **Iniciar teste de conexão** apenas valida a infraestrutura; não inicia turnos.
 
 Regras e próximos passos estão em [docs/projeto.md](./docs/projeto.md).
 
@@ -83,6 +83,19 @@ Abra o **IP de rede do notebook na porta 5173**. O Vite atende a interface na po
 
 Esse comando é usado diretamente por `./iniciar.sh` no Linux nativo (também aceita `--dev`); no WSL ele roda dentro do container, com sincronização do Compose Watch. React Fast Refresh atualiza a interface ao salvar arquivos; o servidor usa `tsx watch` e reinicia ao alterar seus arquivos ou dependências importadas. Reiniciar o servidor descarta a partida em memória, então mudanças no backend exigem reconectar e configurar a partida novamente. Mudanças na interface não reiniciam o servidor, embora algumas alterações possam recarregar a página.
 
+### Configuração por ambiente
+
+O arquivo `.env.example` contém os valores padrão e é versionado; `.env` é local e ignorado pelo Git. O servidor, o Vite e `iniciar.sh` usam os valores locais e completam qualquer configuração ausente com os valores do exemplo. Não coloque segredos no `.env.example`.
+
+Variáveis principais:
+
+- `NODE_ENV`: `development` por padrão; `iniciar.sh --producao` define `production`. O código considera produção somente quando o valor é exatamente `production`.
+- `GAME_GYM_COUNT`: quantidade de ginásios no mapa; padrão `2`.
+- `GAME_TYPE_BONUS`: bônus aditivo de ataque/defesa por vantagem de tipo; padrão `0.1` (±10%). As regras de tipos estão em [docs/projeto.md](./docs/projeto.md#tipos-elementais-e-bônus).
+- `PORT` e `WEB_PORT`: portas do servidor e da interface.
+
+Edite `.env` para personalizar os valores sem alterar os padrões do projeto.
+
 ## Reconexão e dados
 
 - A aba guarda uma chave de reconexão em `sessionStorage`, separada por papel.
@@ -114,8 +127,7 @@ Os testes cobrem validação de comandos, papéis, reconexão, nomes automático
 
 ## Referências e recursos
 
-- [PokéAPI](https://pokeapi.co/) e [documentação REST v2](https://pokeapi.co/docs/v2): referência do plano anterior, ainda sem integração; não é uma fonte definida para o futuro catálogo próprio.
-- Fontes Pokemon Solid e Hollow fornecidas pelo usuário em `pokemon.zip`, servidas em [apps/web/public/fonts](./apps/web/public/fonts). A Solid é usada em títulos e no nome do jogador; textos e controles comuns mantêm a fonte de sistema. O arquivo não inclui licença: verificar os termos antes de publicação/redistribuição.
+- A interface usa fontes de sistema e emblemas provisórios feitos em SVG; criaturas e identidade visual finais serão recursos próprios de Terra.
 
 ## Estrutura
 
